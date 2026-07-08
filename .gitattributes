@@ -1,0 +1,4 @@
+# Normalise line endings across platforms; leave binaries untouched.
+* text=auto
+*.joblib binary
+*.png binary

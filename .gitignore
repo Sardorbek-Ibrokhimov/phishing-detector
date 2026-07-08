@@ -1,0 +1,46 @@
+# Raw datasets (~1.2 GB) — not needed to run the app; re-fetch with
+# src/download_data.py only to re-train or reproduce experiments.
+data/
+
+# Python virtual environment
+.venv/
+venv/
+
+# Byte-compiled / caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# Runtime state — the SQLite feedback/correction DB and any test databases.
+# This is ephemeral state, never source; the app recreates it on first run.
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Secrets — never commit real API keys / passwords
+.env
+.env.*
+*.pem
+*.key
+
+# OS / editor / tooling noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.claude/
+
+# Temp backups created during testing
+*.coldstart-bak
+*.bak
+
+# Fine-tuned DistilBERT email model (Artifact 7) — 257 MB comparison artifact,
+# NOT part of the deployed system; regenerate with src/email_distilbert.py.
+models/email_distilbert/
+
+# NOTE: the following ARE tracked on purpose and must NOT be ignored:
+#   models/deployed_model.joblib      — required to run (loaded at boot)
+#   models/deployed_model.metadata.json
+#   results/                          — evidence + ARTIFACTS.md referenced by README
