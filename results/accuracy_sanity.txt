@@ -1,0 +1,23 @@
+Part 5 — accuracy sanity check (held-out, in-distribution)
+==========================================================
+Phishing: 7/20 correct
+Benign:   17/20 correct
+Overall:  24/40 correct (60.0%)
+
+Misclassified:
+  [phishing -> legitimate@0.984] https://l.ead.me/bfRohL
+  [phishing -> legitimate@0.738] https://l.ead.me/bfFC6R
+  [phishing -> legitimate@0.707] https://pichinchaapro.webcindario.com/
+  [phishing -> legitimate@0.984] https://l.ead.me/bfbPJV
+  [phishing -> legitimate@0.583] https://bradesco.contaprotegida.com
+  [phishing -> legitimate@0.984] https://l.ead.me/bfcAbl
+  [phishing -> legitimate@0.984] https://l.ead.me/coorreeos
+  [phishing -> legitimate@0.558] https://amazon-paiement.com/index.php
+  [phishing -> legitimate@0.738] https://l.ead.me/bfITk0
+  [phishing -> legitimate@0.738] https://l.ead.me/bgcMx0
+  [phishing -> legitimate@0.849] https://l.ead.me/bfF3g9
+  [phishing -> legitimate@0.984] https://l.ead.me/bfJXEc
+  [phishing -> legitimate@0.849] https://l.ead.me/bgc12K
+  [legitimate -> phishing@0.507] http://www.clamaveruntiusti.org/
+  [legitimate -> phishing@0.591] https://de.wikipedia.org/wiki/Allg%C3%A4u
+  [legitimate -> phishing@0.541] http://www.nationalregisterofhistoricplaces.com/AR/Conway/state.html

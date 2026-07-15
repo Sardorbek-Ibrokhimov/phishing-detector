@@ -1,0 +1,38 @@
+{
+  "empty input": {
+    "graceful": true,
+    "status": 200,
+    "overall_verdict": "unknown",
+    "note": "No URLs found in the input. The deployed model classifies URLs; email-body text "
+  },
+  "whitespace only": {
+    "graceful": true,
+    "status": 200,
+    "overall_verdict": "unknown",
+    "note": "No URLs found in the input. The deployed model classifies URLs; email-body text "
+  },
+  "malformed URL": {
+    "graceful": true,
+    "status": 200,
+    "overall_verdict": "unknown",
+    "note": "No URLs found in the input. The deployed model classifies URLs; email-body text "
+  },
+  "very long input (~20k chars)": {
+    "graceful": true,
+    "status": 200,
+    "overall_verdict": "legitimate",
+    "first_url_verdict": "legitimate@0.897",
+    "url_len_echoed": 20019
+  },
+  "URL with unusual characters": {
+    "graceful": true,
+    "status": 200,
+    "overall_verdict": "phishing",
+    "first_url_verdict": "phishing@0.836",
+    "url_len_echoed": 38
+  },
+  "missing content field": {
+    "graceful": true,
+    "status": 422
+  }
+}
