@@ -1,0 +1,58 @@
+Training deployed model for experiments...
+
+======================================================================
+CLAIM 1 — '88.97% accuracy' / leak-free split? (C1 fix verification)
+======================================================================
+
+--- BEFORE (old URL-level random split, for the record) ---
+Exact duplicate URLs across train/test: 0
+Test rows whose registrable domain ALSO appears in train: 11574/20000 (57.9%)
+  phishing: 8577/10000 (85.8%) test domains seen in train
+  benign: 2997/10000 (30.0%) test domains seen in train
+Most common phishing registrable domains: [('google.com', 5330), ('qrco.de', 3534), ('weebly.com', 2846), ('q-r.to', 2723), ('ead.me', 2544)]
+
+--- AFTER (domain-grouped split, tldextract eTLD+1) ---
+Test rows whose registrable domain ALSO appears in train: 0/17050 (0.0%)
+  phishing: 0/6806 (0.0%) test domains seen in train
+  benign: 0/10244 (0.0%) test domains seen in train
+Train/test class balance (grouped split): train=52.1% phishing, test=39.9% phishing
+VERDICT: FIXED — zero domain overlap
+
+======================================================================
+CLAIM 2 — 'detects phishing' or 'detects PhishTank vs Tranco'?
+Testing on URLs from NEITHER source.
+======================================================================
+Legitimate real URLs correct: 10/10
+Phishing-pattern URLs correct: 10/10
+OUT-OF-DISTRIBUTION accuracy: 20/20 (100.0%) vs claimed ~89% in-distribution
+
+Path-vocabulary confound (same domain, benign-vocab vs random path):
+  phishing@0.575  https://example-corp.com/products/category/view
+  phishing@0.817  https://example-corp.com/x7f2a9q/z1p8k
+
+======================================================================
+CLAIM 3 — are SHAP reasons faithful? (perturb a cited feature)
+======================================================================
+
+http://allegro.id-38247ns4.click
+  base phishing proba = 1.000
+  top-SHAP 'host_entropy' (shap=+2.78, val=4.133660689688186): set to benign median 3.43 -> proba 0.992 (delta=-0.008) weak/none
+  top-SHAP 'tld_length' (shap=+2.45, val=5): set to benign median 3.00 -> proba 1.000 (delta=-0.000) weak/none
+  top-SHAP 'num_digits' (shap=+1.74, val=6): set to benign median 0.00 -> proba 0.961 (delta=-0.039) FAITHFUL
+
+http://secure-login-verify.account-update.tk/signin?id=9
+  base phishing proba = 0.993
+  top-SHAP 'num_suspicious_tokens' (shap=+2.93, val=6): set to benign median 0.00 -> proba 0.978 (delta=-0.015) weak/none
+  top-SHAP 'host_entropy' (shap=+1.33, val=4.15487093296263): set to benign median 3.43 -> proba 0.944 (delta=-0.049) FAITHFUL
+  top-SHAP 'num_special' (shap=+1.11, val=2): set to benign median 0.00 -> proba 0.984 (delta=-0.010) weak/none
+
+======================================================================
+CLAIM 4 — is the 'feedback loop' actually a loop?
+======================================================================
+Files that READ the feedback table:
+  api.py
+  review_experiments.py
+  test_requirements.py
+Manual check: the only reader is recent_history() -> DISPLAY only.
+Nothing retrains the model, adjusts a threshold, or maintains an
+allow/deny list from feedback. => It is a feedback LOG, not a LOOP.

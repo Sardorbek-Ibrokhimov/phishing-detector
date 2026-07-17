@@ -1,0 +1,34 @@
+{
+  "trained_at": "2026-07-20T20:36:46+00:00",
+  "random_state": 42,
+  "feature_list": [
+    "num_hyphens",
+    "num_digits",
+    "num_special",
+    "has_at",
+    "has_ip_host",
+    "num_subdomains",
+    "has_port",
+    "host_entropy",
+    "num_suspicious_tokens",
+    "digit_ratio",
+    "tld_length"
+  ],
+  "n_features": 11,
+  "n_train": 82947,
+  "n_test": 17050,
+  "test_metrics": {
+    "accuracy": 0.7213,
+    "precision": 0.7823,
+    "recall": 0.4182,
+    "f1": 0.545,
+    "auc_roc": 0.6878
+  },
+  "model_type": "XGBClassifier",
+  "split_method": "domain-grouped (GroupShuffleSplit, eTLD+1 via tldextract)",
+  "training_data_hash": "da6672d84f83f4977a931c566683567d444e5382e4ff433035efe39f07fb04e6",
+  "source_file_hashes": {
+    "phishing_urls.csv": "ce235b2ced4126c0",
+    "benign_urls.csv": "767309cb4b36657e"
+  }
+}
