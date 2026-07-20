@@ -1,0 +1,21 @@
+# Development / analysis dependencies. NOT needed to run or deploy the app —
+# only to run the test suite, regenerate the SHAP summary plot
+# (src/shap_explain.py), or run the analysis scripts
+# (src/review_experiments.py, src/accuracy_sanity.py, etc.).
+-r requirements.txt
+
+# The `shap` library (+ its matplotlib/numba/llvmlite chain) is used only by
+# the training-time plotting helper and the analysis scripts; the served API
+# does not import it. See the note in requirements.txt.
+shap==0.52.0
+matplotlib==3.11.0
+
+pytest>=8
+
+# Email classifier comparison (DistilBERT)
+# (src/email_distilbert.py). Heavy; not needed for the URL system, the tests,
+# or the plots. Install torch CPU wheels with:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch==2.13.0
+transformers==5.14.1
+datasets==5.0.0

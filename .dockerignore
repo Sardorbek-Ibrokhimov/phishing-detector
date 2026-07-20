@@ -1,0 +1,20 @@
+# Keep the build context small and the image lean. The 1.2 GB data/ dir and
+# the local venv must never enter the image.
+.venv/
+data/
+results/
+tests/
+notebooks/
+*.db
+*.db-journal
+__pycache__/
+**/__pycache__/
+*.pyc
+.git/
+.gitignore
+.pytest_cache/
+.mypy_cache/
+*.ipynb
+.env
+.env.*
+# Model IS shipped (models/deployed_model.joblib, ~3.4 MB) — do NOT ignore it.
