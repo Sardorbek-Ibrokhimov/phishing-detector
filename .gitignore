@@ -44,3 +44,7 @@ models/email_distilbert/
 #   models/deployed_model.joblib      — required to run (loaded at boot)
 #   models/deployed_model.metadata.json
 #   results/                          — evidence + ARTIFACTS.md referenced by README
+
+# Supervisor data export (local deliverable, contains dataset samples)
+data_export_for_supervisor/
+data_export_for_supervisor.zip
