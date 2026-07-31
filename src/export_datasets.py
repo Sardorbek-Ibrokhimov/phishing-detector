@@ -169,6 +169,16 @@ def main():
               "contain **no email addresses**. It does contain ordinary words "
               "including names from the public Enron research corpus (a standard, "
               "published dataset), but no addresses/credentials.",
+              "- **`04_email_raw_sample.csv` is not the untouched component data.** "
+              "It samples the source author's pre-combined, address-stripped "
+              "`phishing_email.csv` (columns `text_combined,label`). The truly-raw "
+              "per-source component files (CEAS_08, Nazario, Nigerian_Fraud, "
+              "SpamAssasin, Enron, Ling) still contain real From/To email "
+              "addresses and are deliberately **not** exported.",
+              "- Email corpus source: Kaggle *Phishing Email Dataset*, "
+              "https://www.kaggle.com/datasets/naserabdullahalam/phishing-email-dataset "
+              "(no download slug/command was recorded in the repo at build time; "
+              "identified from the component-file fingerprint).",
               "- No API keys, passwords, or other secrets are included.",
               ]
     (OUT / "MANIFEST.md").write_text("\n".join(lines), encoding="utf-8")
