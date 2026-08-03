@@ -2,7 +2,7 @@
 
 A web app that checks whether a URL is a phishing attempt and explains why. Built with XGBoost + FastAPI for my final year dissertation on explainable ML in cybersecurity.
 
-![Analysing a phishing URL: the verdict, a confidence bar, plain-English reasons, and the VirusTotal reputation panel](docs/screenshot-analyze.jpg)
+![Analysing a phishing URL: the verdict, a confidence bar, plain-English reasons, and the VirusTotal reputation panel](docs/screenshots/01-phishing.png)
 
 > **Live demo:** https://phishing-detector-nmyw.onrender.com/
 > Password-protected, hosted on Render free tier so first load takes ~30-60s.
@@ -78,7 +78,7 @@ Then open http://localhost:8000.
 3. **History** — see recent analyses
 4. **Report wrong verdict** — click "Report incorrect verdict" to override the model
 
-![History tab](docs/screenshot-history.png)
+![History tab](docs/screenshots/04-history.png)
 
 ## Environment Variables
 

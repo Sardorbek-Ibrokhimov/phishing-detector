@@ -12,6 +12,10 @@ matplotlib==3.11.0
 
 pytest>=8
 
+# Screenshot capture for docs/ (docs/capture_screenshots.py). After installing,
+# fetch the browser once with:  python -m playwright install chromium
+playwright==1.62.0
+
 # Email classifier comparison (DistilBERT)
 # (src/email_distilbert.py). Heavy; not needed for the URL system, the tests,
 # or the plots. Install torch CPU wheels with:
