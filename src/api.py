@@ -661,7 +661,7 @@ def analyze(req: AnalyzeRequest, request: Request):
             verdict_source = "model"
             correction_info = None
 
-        reasons = explain_prediction(state.model, state.cols, feats)
+        reasons = explain_prediction(url, state.model, None, state.cols)["reasons"]
 
         analysis_id = insert_analysis(url, verdict, confidence)
 
