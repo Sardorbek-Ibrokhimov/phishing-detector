@@ -151,6 +151,15 @@
 
   .note { font-size: .92rem; color: var(--muted); }
 
+  /* Honest-limitation notices (display-only; computed from the URL text) */
+  .disclaimer { font-size: .82rem; line-height: 1.5; color: var(--muted);
+                background: var(--surface-2); border: 1px solid var(--border);
+                border-radius: 10px; padding: 11px 13px; margin-bottom: 18px; }
+  .caution { margin-top: 16px; padding: 11px 13px; background: var(--surface-2);
+             border: 1px solid var(--border); border-radius: 10px;
+             font-size: .82rem; line-height: 1.5; color: var(--muted); }
+  .caution b { font-weight: 600; color: var(--ink); }
+
   .card-foot { display: flex; justify-content: flex-end; padding: 10px 18px; border-top: 1px solid var(--border); background: var(--surface-2); }
   .fb-btn { font-weight: 500; font-size: .82rem; padding: 6px 12px; color: var(--muted); background: transparent; border-color: transparent; }
   .fb-btn:hover { color: var(--ink); background: var(--surface); border-color: var(--border); }
@@ -208,6 +217,9 @@
   </div>
 
   <section id="view-analyze">
+    <div class="disclaimer">This tool judges only the text of a web address — it does not open the
+      page or check who owns it. Long, unusual, or free-hosted links (and real login pages) may be
+      flagged as phishing even when they are safe.</div>
     <div class="panel">
       <textarea id="input" placeholder="Paste a URL (e.g. http://example.com/login) or a full email here…"></textarea>
       <div class="controls">
@@ -307,6 +319,12 @@ function render(data) {
     const reasonItems = r.reasons.map(x =>
       `<li><span class="mark">${mark}</span><span>${escapeHtml(stripSuffix(x))}</span></li>`).join("");
 
+    // Display-only caution when the URL trips the model's known weak spots.
+    const caution = tripsKnownWeakness(r.url)
+      ? `<div class="caution">This link has features the model treats as suspicious
+           regardless of real safety — <b>treat this verdict with caution.</b></div>`
+      : "";
+
     // A human-corrected verdict has no probability, so show the correction
     // provenance in place of the confidence bar rather than a fake number.
     const timesNote = r.correction && r.correction.times_corrected > 1
@@ -333,6 +351,7 @@ function render(data) {
         <div class="reasons-h">${reasonsHead}</div>
         <ul class="reasons">${reasonItems}</ul>
         ${renderVT(r.virustotal)}
+        ${caution}
       </div>
       <div class="card-foot" id="fb-${i}">
         <button class="fb-btn" onclick="sendFeedback(${i})">Report incorrect verdict</button>
@@ -348,6 +367,33 @@ function render(data) {
 // the ▲/▼ marker, so drop the repeated parenthetical from each line.
 function stripSuffix(reason) {
   return reason.replace(/\s*\((?:raises|lowers) phishing likelihood\)\s*$/i, "");
+}
+
+// Display-only: does this URL have features the model over-weights, so a
+// verdict on it deserves a caution? Mirrors the known false-positive drivers
+// (see the limitations section). Purely client-side; never changes the verdict.
+const FREE_HOSTS = /(?:^|\.)(?:onrender\.com|herokuapp\.com|vercel\.app|netlify\.app|github\.io|pages\.dev)$/i;
+const SIGNIN_WORDS = /(?:login|signin|verify|secure|account)/i;
+
+function hostEntropy(host) {
+  if (!host) return 0;
+  const freq = {};
+  for (const c of host) freq[c] = (freq[c] || 0) + 1;
+  let e = 0;
+  for (const k in freq) { const p = freq[k] / host.length; e -= p * Math.log2(p); }
+  return e;
+}
+
+function tripsKnownWeakness(url) {
+  let host = "";
+  try { host = new URL(url).hostname; }
+  catch { host = String(url).replace(/^[a-z][a-z0-9+.-]*:\/\//i, "").split(/[\/?#]/)[0]; }
+  const digits = (url.match(/\d/g) || []).length;
+  return url.length > 60                                   // long address
+      || hostEntropy(host) >= 3.6                          // random-looking hostname
+      || digits >= 8 || digits / url.length > 0.2          // many digits
+      || FREE_HOSTS.test(host)                             // free-hosting domain
+      || SIGNIN_WORDS.test(url);                           // sign-in keywords
 }
 
 function renderVT(vt) {
