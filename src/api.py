@@ -30,6 +30,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
+from brand_check import find_brand_mismatches
 from compare_models import clean_columns
 from features import extract_url_features
 from shap_explain import explain_prediction
@@ -40,6 +41,7 @@ logger = logging.getLogger("phishing_api")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_INDEX = PROJECT_ROOT / "frontend" / "index.html"
 MODEL_PATH = PROJECT_ROOT / "models" / "deployed_model.joblib"
+EMAIL_MODEL_PATH = PROJECT_ROOT / "models" / "deployed_email_model.joblib"
 
 FEEDBACK_DB = Path(os.environ.get("PHISHING_DB_PATH", PROJECT_ROOT / "feedback.db"))
 
@@ -453,6 +455,7 @@ analyze_limiter = RateLimiter(ANALYZE_RATE_LIMIT_PER_MIN)
 class _State:
     model = None
     cols = None
+    email_model = None
     vt = None
 
 
@@ -484,14 +487,88 @@ def _load_persisted_model() -> None:
     state.model, state.cols = model, cols
 
 
+def _load_persisted_email_model() -> None:
+    """Load the pre-trained email-text (TF-IDF + LR) model from disk.
+
+    Soft-optional, unlike the URL model: this is a secondary capability
+    layered on top of the original URL analysis, so a missing/broken
+    artifact degrades to "email-text analysis unavailable" rather than
+    refusing to start the whole app.
+    """
+    if not EMAIL_MODEL_PATH.exists():
+        logger.warning(
+            "No persisted email-text model at %s — email wording analysis "
+            "disabled (URL analysis is unaffected). Run "
+            "`.venv/Scripts/python src/persist_email_model.py` to enable it.",
+            EMAIL_MODEL_PATH,
+        )
+        return
+    try:
+        bundle = joblib.load(EMAIL_MODEL_PATH)
+        state.email_model = bundle["model"]
+    except Exception:
+        logger.exception("Failed to load email-text model — email wording analysis disabled.")
+        state.email_model = None
+
+
+EMAIL_REASON_TOP_K = 5
+
+
+def explain_email_text(text: str, model, k: int = EMAIL_REASON_TOP_K) -> dict:
+    """Verdict + confidence + top contributing tokens/phrases for pasted
+    email text, using the TF-IDF + Logistic Regression pipeline. Mirrors
+    explain_prediction()'s shape (verdict/confidence/reasons) so the
+    frontend can render both consistently.
+
+    Per-instance explanation: (this text's TF-IDF weight) x (that token's
+    LR coefficient) for every token present in the text, ranked by how
+    strongly each pushes toward the predicted class — the same idea as
+    SHAP contribution ranking, computed directly from a linear model
+    instead of needing a separate library.
+    """
+    proba_phish = float(model.predict_proba([text])[0, 1])
+    verdict = "phishing" if proba_phish >= 0.5 else "legitimate"
+    confidence = proba_phish if verdict == "phishing" else 1 - proba_phish
+    direction = 1 if verdict == "phishing" else -1
+    suffix = "raises phishing likelihood" if direction == 1 else "lowers phishing likelihood"
+
+    vec = model.named_steps["tfidfvectorizer"]
+    clf = model.named_steps["logisticregression"]
+    x = vec.transform([text]).toarray()[0]
+    contrib = x * clf.coef_[0]
+    names = vec.get_feature_names_out()
+
+    # URL/protocol fragments end up in the vocabulary (raw links appear inline
+    # in training emails) but read as noise in a "wording" explanation, e.g.
+    # "the phrase 'http' in the text" — filter them out of the shown reasons.
+    NOT_WORDING = {"http", "https", "www", "com", "org", "net"}
+
+    present = [i for i in range(len(x)) if x[i] != 0 and names[i] not in NOT_WORDING]
+    present.sort(key=lambda i: direction * contrib[i], reverse=True)
+
+    reasons = []
+    for i in present:
+        if direction * contrib[i] <= 0:
+            break  # ranked descending — once contributions stop supporting the verdict, stop
+        reasons.append(f"the phrase ‘{names[i]}’ in the text ({suffix})")
+        if len(reasons) >= k:
+            break
+    if not reasons:
+        reasons.append(f"the overall combination of wording ({suffix})")
+
+    return {"verdict": verdict, "confidence": round(confidence, 3), "reasons": reasons}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Loading model from %s ...", MODEL_PATH)
     _load_persisted_model()
+    _load_persisted_email_model()
     state.vt = VirusTotalClient()
     init_db()
-    logger.info("Model ready (%d features). VT key: %s. DB: %s",
-                len(state.cols), "configured" if state.vt.api_key else "not configured",
+    logger.info("Model ready (%d features). Email-text model: %s. VT key: %s. DB: %s",
+                len(state.cols), "loaded" if state.email_model else "unavailable",
+                "configured" if state.vt.api_key else "not configured",
                 FEEDBACK_DB)
     if FEEDBACK_API_KEY:
         logger.info("Corrections enabled.")
@@ -568,6 +645,7 @@ def health():
     return {
         "status": "ok",
         "model_loaded": state.model is not None,
+        "email_model_loaded": state.email_model is not None,
         "analyze_rate_limit_per_min": ANALYZE_RATE_LIMIT_PER_MIN,
         "corrections_enabled": bool(FEEDBACK_API_KEY),
     }
@@ -600,8 +678,13 @@ def _classify_input_type(content: str, urls: list[str]) -> str:
 
 
 def _stable_response(input_type, urls_analyzed, overall_verdict, overall_confidence,
-                      note=None, truncated=False, corrections_applied=0) -> dict:
-    """Consistent response shape for every /analyze branch."""
+                      note=None, truncated=False, corrections_applied=0,
+                      email_text_verdict=None, brand_mismatches=None) -> dict:
+    """Consistent response shape for every /analyze branch.
+
+    email_text_verdict and brand_mismatches are new, additive, always-optional
+    fields (None/[] unless applicable) — existing consumers of
+    urls_analyzed/overall_verdict are unaffected."""
     return {
         "input_type": input_type,
         "urls_analyzed": urls_analyzed,
@@ -610,6 +693,8 @@ def _stable_response(input_type, urls_analyzed, overall_verdict, overall_confide
         "note": note,
         "truncated": truncated,
         "corrections_applied": corrections_applied,
+        "email_text_verdict": email_text_verdict,
+        "brand_mismatches": brand_mismatches or [],
     }
 
 
@@ -627,15 +712,33 @@ def analyze(req: AnalyzeRequest, request: Request):
     urls = extract_urls(content)
     input_type = _classify_input_type(content, urls)
 
+    # Email-text wording analysis: only for genuine pasted text (not a lone
+    # URL, where there's no "wording" to speak of), only when the model
+    # loaded successfully at startup.
+    email_text_verdict = None
+    if input_type == "email_text" and state.email_model is not None:
+        email_text_verdict = explain_email_text(content, state.email_model)
+
     if not urls:
+        if email_text_verdict is not None:
+            return _stable_response(
+                input_type, [], email_text_verdict["verdict"], email_text_verdict["confidence"],
+                note="No links found in the text — verdict is based on the wording only.",
+                email_text_verdict=email_text_verdict,
+            )
         return _stable_response(
             input_type, [], "unknown", None,
-            note="No URLs found in the input. The deployed model classifies "
-                 "URLs only — paste a URL or an email containing links.",
+            note=("No URLs found, and email-wording analysis is unavailable right now."
+                  if input_type == "email_text" else
+                  "No URLs found in the input. Paste a URL or an email containing links."),
         )
 
     truncated = len(urls) > MAX_URLS_PER_REQUEST
     urls = urls[:MAX_URLS_PER_REQUEST]
+
+    # Cross-reference: does the text claim a brand that none of the links
+    # actually go to? Deterministic, not model-based — see brand_check.py.
+    brand_mismatches = find_brand_mismatches(content, urls)
 
     results = []
     corrections_applied = 0
@@ -685,8 +788,24 @@ def analyze(req: AnalyzeRequest, request: Request):
             "analysis_id": analysis_id,
         })
 
-    worst = max(results, key=lambda r: (r["verdict"] == "phishing", r.get("model_confidence", 0)))
+    # Roll the email-wording verdict into the worst-case alongside the
+    # per-URL results, so phishing wording with a clean/no link still
+    # surfaces as the overall verdict rather than being silently dropped.
+    candidates = list(results)
+    if email_text_verdict is not None:
+        candidates.append({
+            "verdict": email_text_verdict["verdict"],
+            "confidence": email_text_verdict["confidence"],
+            "model_confidence": email_text_verdict["confidence"],
+        })
+    if brand_mismatches:
+        # Deterministic, not a model probability — but it's a near-certain
+        # phishing tell, so it outranks both models' confidence in the
+        # worst-case rollup rather than being averaged away.
+        candidates.append({"verdict": "phishing", "confidence": 0.99, "model_confidence": 0.99})
+    worst = max(candidates, key=lambda r: (r["verdict"] == "phishing", r.get("model_confidence", 0)))
     return _stable_response(
         input_type, results, worst["verdict"], worst["confidence"],
         truncated=truncated, corrections_applied=corrections_applied,
+        email_text_verdict=email_text_verdict, brand_mismatches=brand_mismatches,
     )
