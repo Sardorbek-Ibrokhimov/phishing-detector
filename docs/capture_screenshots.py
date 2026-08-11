@@ -59,6 +59,36 @@ If you did not request this, secure your account here:
 Thank you,
 PayPal Security Team"""
 
+# Brand-mismatch showcase: claims Microsoft, links to a domain that isn't
+# Microsoft's — exercises all three signals (brand check, email wording,
+# URL model) at once, on a different brand than EMAIL_TEXT above.
+BRAND_MISMATCH_TEXT = """From: Microsoft Account Team <security@microsoft-alerts.com>
+Subject: Action required: unusual sign-in activity on your Microsoft account
+
+Dear Customer,
+
+We detected an unusual sign-in attempt on your Microsoft account from an
+unrecognized device in Lagos, Nigeria. To protect your account, please
+verify your identity immediately.
+
+If you do not confirm your identity within 24 hours, your account will be
+temporarily locked for your security.
+
+Verify your account now:
+http://microsoft-account-verify.secure-login.tk/confirm?user=88213
+
+Thank you for helping us keep your account secure.
+
+Microsoft Account Team"""
+
+# Wording-only showcase: phishing intent with NO link at all — a case the
+# URL model literally cannot see, and only the email-text model can catch.
+WORDING_ONLY_TEXT = """Congratulations! You have been selected to receive a free
+$500 gift card. This is a limited-time offer available only to a select
+number of recipients. To claim your reward, simply reply to this email with
+your full name, date of birth, and mailing address within 48 hours. Act now
+before this exclusive offer expires!"""
+
 
 def free_port() -> int:
     with socket.socket() as s:
@@ -149,6 +179,25 @@ def main() -> int:
             page.wait_for_timeout(600)
             page.screenshot(path=str(OUT / "04-history.png"), full_page=True)
             print("saved 04-history.png")
+
+            # 5 — brand-impersonation banner + email wording + URL, all three
+            # signals firing together on one input.
+            page.click("#tab-analyze")
+            page.fill("#input", "")
+            analyze(page, BRAND_MISMATCH_TEXT)
+            page.wait_for_selector(".brand-alert", timeout=20000)
+            page.screenshot(path=str(OUT / "05-brand-mismatch.png"), full_page=True)
+            print("saved 05-brand-mismatch.png")
+
+            # 6 — email wording alone: phishing intent with zero links, a
+            # case the URL model has nothing to check at all.
+            page.fill("#input", "")
+            page.fill("#input", WORDING_ONLY_TEXT)
+            page.click("#analyzeBtn")
+            page.wait_for_selector("#results .card .badge", timeout=20000)
+            page.wait_for_timeout(1000)
+            page.screenshot(path=str(OUT / "06-wording-only.png"), full_page=True)
+            print("saved 06-wording-only.png")
 
             browser.close()
     finally:
