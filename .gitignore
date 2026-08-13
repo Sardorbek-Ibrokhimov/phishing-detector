@@ -30,20 +30,19 @@ __pycache__/
 Thumbs.db
 .idea/
 .vscode/
-.claude/
 
 # Temp backups created during testing
 *.coldstart-bak
 *.bak
 
-# Fine-tuned DistilBERT email model (Artifact 7) — 257 MB comparison artifact,
+# Fine-tuned DistilBERT email model — 257 MB comparison artifact,
 # NOT part of the deployed system; regenerate with src/email_distilbert.py.
 models/email_distilbert/
 
 # NOTE: the following ARE tracked on purpose and must NOT be ignored:
 #   models/deployed_model.joblib      — required to run (loaded at boot)
 #   models/deployed_model.metadata.json
-#   results/                          — evidence + ARTIFACTS.md referenced by README
+#   results/                          — evidence referenced by README
 
 # Supervisor data export (local deliverable, contains dataset samples)
 data_export_for_supervisor/
