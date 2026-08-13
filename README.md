@@ -4,7 +4,7 @@ A web app that checks whether a URL or an email is a phishing attempt and explai
 
 ![Analysing a phishing URL: the verdict, a confidence bar, plain-English reasons, and the VirusTotal reputation panel](docs/screenshots/01-phishing.png)
 
-> **Live demo:** https://phishing-detector-nmyw.onrender.com/
+> **Live demo:** https://phishing-detector-fzlq.onrender.com/
 > Password-protected, hosted on Render free tier so first load takes ~30-60s.
 
 ## What it does
